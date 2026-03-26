@@ -32,9 +32,115 @@ class QwenVLDescriber:
 
     def describe_image(self, problem, image_path: str, feedback: str = None) -> str:
         image = Image.open(image_path).convert("RGB")
+        image_example1 = Image.open("images/image_example1.png").convert("RGB")
+        image_example2 = Image.open("images/image_example2.png").convert("RGB")
+        image_example3 = Image.open("images/image_example3.png").convert("RGB")
+        example_parse1 = f"""
+                You are a geometry diagram parser.
+                Convert the geometry diagram into symbolic clauses.
+                Example Problem 1 (Image 1):
 
-        prompt = f"""
-                Now parse the following problem with the given figure (Image 1).
+                Question 1:
+                As shown in the figure, in \\odot X, A B = 30, C D = 30, and m \\widehat C Z = 40. Find m \\widehat A B
+
+                Description:
+
+                circle X
+                A, B, C, D, Y, Z lie on circle X
+
+                chord AB
+                chord CD
+
+                line AB
+                line CD
+                line XM
+                line XN
+                line XMY
+                line XNZ
+
+                M lies on AB
+                N lies on CD
+
+                M is the intersection of XM and AB
+                N is the intersection of XN and CD
+
+                XM perpendicular AB at M
+                XN perpendicular CD at N
+
+                X, M, Y are collinear
+                X, N, Z are collinear
+
+                XA = XB = XC = XD = XY = XZ   // all are radii of circle X
+
+                AB = 30
+                CD = 30
+
+                arc CZ = 40
+
+                ---
+                """
+        example_parse2 = f"""
+                You are a geometry diagram parser.
+                Convert the geometry diagram into symbolic clauses.
+                Example Problem 2 (Image 2):
+
+                Question 2:
+                Find y.
+
+                Description:
+
+                Triangle ABC lies on A B C
+                line AB
+                line BC
+                line AC
+
+                ∠A = 90°.
+                ∠B = 30°.
+
+                BC = 18.
+
+                AB = y.
+                AC = x.
+                ---
+                """
+        example_parse3 = f"""
+                You are a geometry diagram parser.
+                Convert the geometry diagram into symbolic clauses.
+                Example Problem 3 (Image 3):
+
+                Question 2:
+                Find y.
+
+                Description:
+
+                Triangle ABC lies on A B C
+                Triangle ADC lies on A D C
+                Triangle ABC and Triangle ADC share base AC
+                line AB
+                line BC
+                line CD
+                line DA
+                line AC
+                line DB
+
+                E is the intersection of AC and DB
+                AC perpendicular DB at E
+
+                AE = EC = EB
+
+                ∠AEB = 90°.
+                ∠BEC = 30°.
+                ∠ADB = x°.
+
+                AB = 8.
+                BC = 8.
+                AD = 10.
+                DC = 10.
+
+                ---
+                """
+        prompt_text = f"""
+                Now parse the following problem with the given figure (Image 4) using exact the same format as the example problem.
 
                 Don't do reasoning to solve the problem
 
@@ -42,51 +148,50 @@ class QwenVLDescriber:
 
 
 
-                1. Identify all important geometric points in the diagram,
-                If the diagram already provides point names as the example problem 1 does, use those names and don't need to specially introduce them.
-                2. If the diagram does NOT provide point names as the example problem 2 does, you must introduce point names yourself
-                make sure point out introduced points' definition.
-                3. When introducing new point names:
-                (1) Use canonical names P1, P2, P3, P4, … in the order you detect the points.
-                (2) Each point must be explicitly defined before it is used.
-                4. Each point definition must clearly indicate the location or role of the point in the diagram, for example:
-                (1) endpoint of a segment
-                (2) vertex of a triangle
-                (3) intersection of two lines
-                (4) center of a circle
-                (5) midpoint of a segment.
-                5. Extract only facts that are explicitly visible in the diagram or explicitly stated in the question.
-                6. Then add standard properties that are directly implied by named geometric shapes.
-                For example, if the figure is a parallelogram ABCD, always include:
-                - AB ∥ CD
-                - AD ∥ BC
-                - AB = CD
-                - AD = BC
-                7. Do NOT invent unsupported angle relations.
-                8. Do NOT say a segment bisects an angle unless the problem explicitly states it or there is an unambiguous angle-bisector mark.
-                9. If a segment bisects an angle, points out which two angles are equivalent
-                For example, it CD bisects ACB, you may infer:
-                angle ACD = angle BCD
-                10. If a point lies on a segment, state it explicitly.
-                11. Output one clause per line.
-                12. Do not explain your reasoning.
-                13. Use the symbol "=" for equality.
+                1. Identify all important geometric points in the diagram, If the diagram already provides point names, use those names and don't need to specially introduce them.
+
+                2. Extract only facts that are explicitly visible in the diagram or explicitly stated in the question.
+                3. Then add standard properties that are directly implied by named geometric shapes.
+                  For example, if the figure is a parallelogram ABCD, always include:
+                  - AB ∥ CD
+                  - AD ∥ BC
+                  - AB = CD
+                  - AD = BC
+                4. Do NOT invent unsupported angle relations.
+                5. Do NOT say a segment bisects an angle unless the problem explicitly states it or there is an unambiguous angle-bisector mark.
+                6. If a segment bisects an angle, points out which two angles are equivalent
+                  For example, it CD bisects ACB, you may infer:
+                  angle ACD = angle BCD
+                7. If a point lies on a segment, state it explicitly.
+                8. Output one clause per line.
+                9. Do not explain your reasoning.
+                10. Use the symbol "=" for equality.
 
 
                 Question:
-                {problem}
+                {question}
+                Description:
 
-                Clause Description:
                 """
 
         messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image"},
-                    {"type": "text", "text": prompt},
-                ],
-            }
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Example image1:"},
+                {"type": "image"},
+                {"type": "text", "text": example_parse1},
+                {"type": "text", "text": "Example image2:"},
+                {"type": "image"},
+                {"type": "text", "text": example_parse2},
+                {"type": "text", "text": "Example image3:"},
+                {"type": "image"},
+                {"type": "text", "text": example_parse3},
+                {"type": "image"},
+                {"type": "text", "text": prompt_text},
+
+            ]
+        }
         ]
 
         prompt = self.processor.apply_chat_template(
